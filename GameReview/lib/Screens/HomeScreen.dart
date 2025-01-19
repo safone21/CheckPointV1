@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:games/Screens/HomePages/GamesListFetch.dart';
-import 'package:games/Screens/HomePages/UserProfilePage.dart';
+
+
+import 'HomePages/UserProfilePage.dart';
+
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -14,7 +17,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   final List<Widget> pages = [
     GamesList(),
-    UserProfile(),
+    UserProfile()
   ];
 
   @override

@@ -306,6 +306,7 @@ class _SingleGameState extends State<SingleGame> {
                     final userName = review['userName'] ?? 'Anonymous';
                     final userInitial = review['userInitial'] ?? '?';
 
+
                     // Generate random RGB colors for the border
                     final random = Random();
                     final borderColor = Color.fromARGB(
@@ -314,6 +315,11 @@ class _SingleGameState extends State<SingleGame> {
                       random.nextInt(256), // Green (0-255)
                       random.nextInt(256), // Blue (0-255)
                     );
+
+
+                    final formattedDate = review['timestamp'] != null
+                        ? DateFormat('yyyy-MM-dd HH:mm').format(review['timestamp'].toDate())
+                        : 'Unknown Date';
 
                     return Card(
                       margin: const EdgeInsets.symmetric(vertical: 8),
@@ -347,7 +353,7 @@ class _SingleGameState extends State<SingleGame> {
                                   ),
                                   Text('Rating: ${review['rating']}'),
                                   Text('Review: ${review['description']}'),
-                                  Text('Date: ${review['timestamp'].toDate()}'),
+                                  Text('Date: $formattedDate'),
                                 ],
                               ),
                             ),
