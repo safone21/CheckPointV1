@@ -67,6 +67,30 @@ class _UserProfileState extends State<UserProfile> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: AppBar(
+        title: const Text('Profile'),
+        backgroundColor: Colors.teal[700],
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.notifications),
+            onPressed: () {
+              // Handle notifications action
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Notifications clicked')),
+              );
+            },
+          ),
+          IconButton(
+            icon: const Icon(Icons.favorite),
+            onPressed: () {
+              // Handle heart action
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Heart clicked')),
+              );
+            },
+          ),
+        ],
+      ),
       body: ListView(
         padding: EdgeInsets.zero,
         children: [
