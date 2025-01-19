@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'HomeScreen.dart';
 import 'SignUp.dart';
@@ -50,6 +51,8 @@ class _LoginScreenState extends State<LoginScreen> {
     return null;
   }
 
+
+
   Future<void> _login() async {
     if (_formKey.currentState?.validate() ?? false) {
       setState(() {
@@ -65,6 +68,10 @@ class _LoginScreenState extends State<LoginScreen> {
         );
 
         if (userCredential.user != null) {
+          // Store the current login timestamp in SharedPreferences
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setInt('lastLogin', DateTime.now().millisecondsSinceEpoch);
+
           // Check if email is verified
           if (userCredential.user!.emailVerified) {
             // Email is verified, login successful
@@ -118,6 +125,7 @@ class _LoginScreenState extends State<LoginScreen> {
       }
     }
   }
+
 
   Future<void> _resetPassword() async {
     try {
