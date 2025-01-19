@@ -1,6 +1,7 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:games/firebase_options.dart';
 import 'Screens/HomeScreen.dart';
 import 'Screens/LoginScreen.dart'; // Ensure you have the LoginScreen imported
@@ -8,9 +9,7 @@ import 'Screens/SplashScreen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   runApp(const MyApp());
 }
 
@@ -45,6 +44,19 @@ class _AuthGateState extends State<AuthGate> {
   @override
   void initState() {
     super.initState();
+    _checkUserLogin();
+  }
+
+  Future<void> _checkUserLogin() async {
+    final prefs = await SharedPreferences.getInstance();
+    final lastLogin = prefs.getInt('lastLogin') ?? 0;
+    final currentTime = DateTime.now().millisecondsSinceEpoch;
+
+    // Check if it's been more than 1 month (30 days = 2592000000 milliseconds)
+    if (currentTime - lastLogin > 2592000000) {
+      await FirebaseAuth.instance.signOut();  // Log out if it's been more than 1 month
+      prefs.remove('lastLogin');  // Remove the last login timestamp
+    }
 
     // Listen for Firebase auth state changes
     FirebaseAuth.instance.authStateChanges().listen((User? user) {
@@ -66,7 +78,6 @@ class _AuthGateState extends State<AuthGate> {
 
   @override
   Widget build(BuildContext context) {
-
     return Scaffold(
       body: Center(
         child: CircularProgressIndicator(),
