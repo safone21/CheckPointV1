@@ -124,25 +124,23 @@ class _GamesListState extends State<GamesList> {
                 ),
               ),
               padding: const EdgeInsets.only(left: 10, right: 10, top: 35, bottom: 35),
-              child: Expanded(
-                child: TextField(
-                  controller: searchController,
-                  style: const TextStyle(color: Colors.white),
-                  decoration: InputDecoration(
-                    hintText: 'Search games...',
-                    hintStyle: TextStyle(color: Colors.grey[400]),
-                    prefixIcon: const Icon(Icons.search, color: Colors.white),
-                    filled: true,
-                    fillColor: Colors.grey[900],
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(15),
-                      borderSide: BorderSide.none,
-                    ),
+              child: TextField(
+                controller: searchController,
+                style: const TextStyle(color: Colors.white),
+                decoration: InputDecoration(
+                  hintText: 'Search games...',
+                  hintStyle: TextStyle(color: Colors.grey[400]),
+                  prefixIcon: const Icon(Icons.search, color: Colors.white),
+                  filled: true,
+                  fillColor: Colors.grey[900],
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(15),
+                    borderSide: BorderSide.none,
                   ),
-                  onChanged: (query) {
-                    searchGames(query);
-                  },
                 ),
+                onChanged: (query) {
+                  searchGames(query);
+                },
               ),
             ),
             Container(
@@ -176,13 +174,16 @@ class _GamesListState extends State<GamesList> {
             ),
             Expanded(
               child: games.isEmpty
-                  ? const Center(child: CircularProgressIndicator())
-                  : Column(
-                children: [
-                  Expanded(
-                    child: Padding(
+                  ? const Center(
+                child: CircularProgressIndicator(),
+              ) : SingleChildScrollView(
+                child: Column(
+                  children: [
+                    Padding(
                       padding: const EdgeInsets.all(8.0),
                       child: GridView.builder(
+                        physics: const NeverScrollableScrollPhysics(),
+                        shrinkWrap: true,
                         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                           crossAxisCount: 2,
                           crossAxisSpacing: 10,
@@ -204,31 +205,30 @@ class _GamesListState extends State<GamesList> {
                         },
                       ),
                     ),
-                  ),
-                  // Add pagination controls
-                  Container(
-                    padding: const EdgeInsets.symmetric(vertical: 10),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        IconButton(
-                          icon: const Icon(Icons.arrow_back),
-                          onPressed: currentPage > 0 ? previousPage : null,
-                          color: Colors.white,
-                        ),
-                        Text(
-                          '${currentPage + 1} / ${(games.length / itemsPerPage).ceil()}',
-                          style: const TextStyle(color: Colors.white),
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.arrow_forward),
-                          onPressed: (currentPage + 1) * itemsPerPage < games.length ? nextPage : null,
-                          color: Colors.white,
-                        ),
-                      ],
+                    Container(
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          IconButton(
+                            icon: const Icon(Icons.arrow_back),
+                            onPressed: currentPage > 0 ? previousPage : null,
+                            color: Colors.white,
+                          ),
+                          Text(
+                            '${currentPage + 1} / ${(games.length / itemsPerPage).ceil()}',
+                            style: const TextStyle(color: Colors.white),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.arrow_forward),
+                            onPressed: (currentPage + 1) * itemsPerPage < games.length ? nextPage : null,
+                            color: Colors.white,
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ],
