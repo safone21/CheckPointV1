@@ -25,7 +25,32 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return SafeArea(
+
       child: Scaffold(
+        appBar: AppBar(
+          backgroundColor: Colors.teal[700],
+          title: Text("Home"),
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.notifications),
+              onPressed: () {
+                // Handle notifications action
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Notifications clicked')),
+                );
+              },
+            ),
+            IconButton(
+              icon: const Icon(Icons.favorite),
+              onPressed: () {
+                // Handle heart action
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Heart clicked')),
+                );
+              },
+            ),
+          ],
+        ),
         body: pages[pageIndex],
         bottomNavigationBar: BottomNavigationBar(
           currentIndex: pageIndex,
@@ -53,6 +78,7 @@ class _HomeScreenState extends State<HomeScreen> {
               icon: Icon(Icons.person),
               label: 'Profile',
             ),
+
             BottomNavigationBarItem(
               icon: Icon(Icons.logout),
               label: 'Sign Out',
