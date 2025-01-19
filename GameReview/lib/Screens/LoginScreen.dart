@@ -18,6 +18,9 @@ class _LoginScreenState extends State<LoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _isLoading = false;
+  bool _obscurePassword = true;
+
+
 
   @override
   void initState() {
@@ -141,7 +144,6 @@ class _LoginScreenState extends State<LoginScreen> {
               // Image with gradient overlay
               Stack(
                 children: [
-                  // The image
                   Container(
                     width: double.infinity,
                     height: 200,
@@ -152,7 +154,6 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ),
                   ),
-                  // Gradient overlay
                   Positioned.fill(
                     child: Container(
                       decoration: BoxDecoration(
@@ -160,8 +161,8 @@ class _LoginScreenState extends State<LoginScreen> {
                           begin: Alignment.bottomCenter,
                           end: Alignment.topCenter,
                           colors: [
-                            Colors.black.withOpacity(0.6), // Black gradient at the bottom
-                            Colors.transparent, // Transparent at the top
+                            Colors.black.withOpacity(0.6),
+                            Colors.transparent,
                           ],
                         ),
                       ),
@@ -169,11 +170,10 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ],
               ),
-              // Title under the image
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 16.0),
                 child: Text(
-                  'Sign Up',
+                  'Login',
                   style: TextStyle(
                     fontSize: 24,
                     fontWeight: FontWeight.bold,
@@ -181,7 +181,6 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ),
               ),
-              // Form fields
               Padding(
                 padding: const EdgeInsets.all(16.0),
                 child: Form(
@@ -239,8 +238,26 @@ class _LoginScreenState extends State<LoginScreen> {
                             borderRadius: BorderRadius.circular(8),
                             borderSide: BorderSide(color: Colors.red, width: 2),
                           ),
+                          suffixIcon: GestureDetector(
+                            onTapDown: (_) {
+                              setState(() {
+                                _obscurePassword = false;
+                              });
+                            },
+                            onTapUp: (_) {
+                              setState(() {
+                                _obscurePassword = true;
+                              });
+                            },
+                            child: Icon(
+                              _obscurePassword
+                                  ? Icons.visibility_off
+                                  : Icons.visibility,
+                              color: Colors.grey,
+                            ),
+                          ),
                         ),
-                        obscureText: true,
+                        obscureText: _obscurePassword,
                         validator: passwordValidator,
                       ),
                       SizedBox(height: 15),
@@ -250,11 +267,12 @@ class _LoginScreenState extends State<LoginScreen> {
                         ElevatedButton(
                           onPressed: _login,
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.teal, // Button color
-                            foregroundColor: Colors.white, // Text color
-                            padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12), // Padding
+                            backgroundColor: Colors.teal,
+                            foregroundColor: Colors.white,
+                            padding: EdgeInsets.symmetric(
+                                horizontal: 24, vertical: 12),
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8), // Rounded corners
+                              borderRadius: BorderRadius.circular(8),
                             ),
                           ),
                           child: Text('Se connecter'),
@@ -263,7 +281,8 @@ class _LoginScreenState extends State<LoginScreen> {
                         onPressed: () {
                           Navigator.push(
                             context,
-                            MaterialPageRoute(builder: (context) => SignUpScreen()),
+                            MaterialPageRoute(
+                                builder: (context) => SignUpScreen()),
                           );
                         },
                         child: Text('Créer un compte'),
@@ -282,6 +301,8 @@ class _LoginScreenState extends State<LoginScreen> {
       ),
     );
   }
+
+
 
   @override
   void dispose() {
