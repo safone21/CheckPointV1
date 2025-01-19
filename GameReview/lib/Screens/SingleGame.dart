@@ -122,7 +122,8 @@ class _SingleGameState extends State<SingleGame> {
   Widget build(BuildContext context) {
     return SafeArea(
       child: Scaffold(
-        appBar: AppBar(title: Text(gameData?['title'] ?? "Game Details")),
+        appBar: AppBar(title: Text(gameData?['title'] ?? "Game Details"),
+        backgroundColor: Colors.teal[700],),
         body: isLoading
             ? const Center(child: CircularProgressIndicator())
             : SingleChildScrollView(
