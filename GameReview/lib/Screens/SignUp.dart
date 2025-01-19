@@ -73,7 +73,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
           // Store data in Firestore
           await FirebaseFirestore.instance
               .collection('users')
-              .doc(userCredential.user!.uid) // Use Firebase Auth UID as document ID
+              .doc(userCredential.user!.uid)
               .set({
             'nom': _nomController.text,
             'prenom': _prenomController.text,
@@ -82,14 +82,14 @@ class _SignUpScreenState extends State<SignUpScreen> {
             'createdAt': FieldValue.serverTimestamp(),
           });
 
-          // Send email verification
+
           await userCredential.user!.sendEmailVerification();
 
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text('Compte créé avec succès. Un e-mail de vérification a été envoyé.')),
           );
 
-          // Navigate to LoginScreen (you can also inform the user to check their email)
+
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(
@@ -149,7 +149,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                     color: Colors.teal,
                   ),
                 ),
-                SizedBox(height: 20), // Add some space between the title and the form
+                SizedBox(height: 20),
 
                 // Name field
                 TextFormField(
