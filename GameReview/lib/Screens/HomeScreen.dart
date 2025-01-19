@@ -29,7 +29,7 @@ class _HomeScreenState extends State<HomeScreen> {
       child: Scaffold(
         appBar: AppBar(
           backgroundColor: Colors.teal[700],
-          title: Text("Home"),
+          title: Text("Home Screen"),
           actions: [
             IconButton(
               icon: const Icon(Icons.notifications),
