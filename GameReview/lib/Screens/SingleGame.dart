@@ -65,71 +65,62 @@ class _SingleGameState extends State<SingleGame> {
                   gameData!['short_description'] ?? "",
                   style: const TextStyle(fontSize: 16),
                 ),
+                SizedBox(height: 16),
+                //part Amine
+                TextField(
+                  controller: _descriptionController,
+                  decoration: InputDecoration(
+                    hintText: 'Enter your review ...',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    filled: true,
+                    // Light background for the input field
+                    contentPadding: const EdgeInsets.all(12),
+                  ),
+                  maxLines: 5,
+                  style: const TextStyle(
+                      fontSize: 16), // Custom text style
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'Rate Your Experience !',
+                  style: TextStyle(
+                      fontWeight: FontWeight.bold, fontSize: 18),
+                ),
+                const SizedBox(height: 8),
+                RatingBar.builder(
+                  initialRating: _rating,
+                  minRating: 1,
+                  allowHalfRating: true,
+                  itemCount: 5,
+                  itemBuilder: (_, __) =>
+                  const Icon(Icons.star, color: Colors.amber),
+                  onRatingUpdate: (rating) =>
+                      setState(() => _rating = rating),
+                ),
                 const SizedBox(height: 16),
-                if (gameData!['minimum_system_requirements'] != null) ...[
-                  const Text(
-                    "Memory Requirements:",
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                  ),
-                  Text(gameData!['minimum_system_requirements']['memory'] ?? "N/A"),
-                  SizedBox(height: 20),
-                  //part Amine
-                  TextField(
-                    controller: _descriptionController,
-                    decoration: InputDecoration(
-                      hintText: 'Enter your review ...',
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
+                Center(
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.teal, // Button color
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 50, vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(
+                            30), // Rounded button corners
                       ),
-                      filled: true,
-                      fillColor: Colors
-                          .grey, // Light background for the input field
-                      contentPadding: const EdgeInsets.all(12),
                     ),
-                    maxLines: 5,
-                    style: const TextStyle(
-                        fontSize: 16), // Custom text style
-                  ),
-                  const Text(
-                    'Rate Your Experience !',
-                    style: TextStyle(
-                        fontWeight: FontWeight.bold, fontSize: 18),
-                  ),
-                  const SizedBox(height: 8),
-                  RatingBar.builder(
-                    initialRating: _rating,
-                    minRating: 1,
-                    allowHalfRating: true,
-                    itemCount: 5,
-                    itemBuilder: (_, __) =>
-                    const Icon(Icons.star, color: Colors.amber),
-                    onRatingUpdate: (rating) =>
-                        setState(() => _rating = rating),
-                  ),
-                  const SizedBox(height: 16),
-                  Center(
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.teal, // Button color
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 50, vertical: 12),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(
-                              30), // Rounded button corners
-                        ),
-                      ),
-                      onPressed: _submitReview,
-                      child: const Text(
-                        'Add Review',
-                        style: TextStyle(
-                          fontSize: 16,
-                          color: Colors.white, // Set text color to white
-                        ),
+                    onPressed: _submitReview,
+                    child: const Text(
+                      'Add Review',
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: Colors.white, // Set text color to white
                       ),
                     ),
                   ),
-
-                ],
+                ),
               ],
             ),
           ),
