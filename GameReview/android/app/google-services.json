@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "1008359661534",
+    "project_id": "gamesapp-43afc",
+    "storage_bucket": "gamesapp-43afc.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1008359661534:android:9150a3c2add0df4748474f",
+        "android_client_info": {
+          "package_name": "com.example.games"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCM2wMp1Qxr0LogJmqXEt8MbY4wxN6p9rY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1008359661534:android:e330de0b66ff63d348474f",
+        "android_client_info": {
+          "package_name": "com.example.games_rate"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCM2wMp1Qxr0LogJmqXEt8MbY4wxN6p9rY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
