@@ -26,6 +26,29 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     return SafeArea(
       child: Scaffold(
+        appBar: AppBar(
+          title: const Text('Home Screen'),
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.notifications),
+              onPressed: () {
+                // Handle notifications action
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Notifications clicked')),
+                );
+              },
+            ),
+            IconButton(
+              icon: const Icon(Icons.favorite),
+              onPressed: () {
+                // Handle heart action
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Heart clicked')),
+                );
+              },
+            ),
+          ],
+        ),
         body: pages[pageIndex],
         bottomNavigationBar: BottomNavigationBar(
           currentIndex: pageIndex,
