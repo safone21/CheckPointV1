@@ -1,9 +1,11 @@
 import 'dart:convert';
+import 'dart:math';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_rating_bar/flutter_rating_bar.dart';
 import 'package:http/http.dart' as http;
+import 'package:intl/intl.dart';
 
 class SingleGame extends StatefulWidget {
   final int gameId;
@@ -18,11 +20,85 @@ class _SingleGameState extends State<SingleGame> {
   bool isLoading = true;
   final _descriptionController = TextEditingController();
   double _rating = 3.0;
+  List<Map<String, dynamic>> reviews = [];
+
 
   @override
   void initState() {
     super.initState();
     fetchGameDetails();
+    fetchReviews();
+  }
+
+  /*
+  Future<void> fetchReviews() async {
+    try {
+      final reviewsSnapshot = await FirebaseFirestore.instance
+          .collection('reviews')
+          .where('gameId', isEqualTo: widget.gameId)
+          .get();
+
+      final List<Map<String, dynamic>> loadedReviews = [];
+      for (var doc in reviewsSnapshot.docs) {
+        loadedReviews.add(doc.data());
+
+      }
+
+      setState(() {
+        reviews = loadedReviews;
+      });
+    } catch (e) {
+      print('Error fetching reviews: $e');
+    }
+  }
+
+   */
+
+  Future<void> fetchReviews() async {
+    try {
+      final reviewsSnapshot = await FirebaseFirestore.instance
+          .collection('reviews')
+          .where('gameId', isEqualTo: widget.gameId)
+          .get();
+
+      final List<Map<String, dynamic>> loadedReviews = [];
+      for (var doc in reviewsSnapshot.docs) {
+        final reviewData = doc.data();
+        final userId = reviewData['userId'];
+
+        // Fetch the user's details using the userId
+        if (userId != null) {
+          final userSnapshot = await FirebaseFirestore.instance
+              .collection('users')
+              .doc(userId)
+              .get();
+
+          if (userSnapshot.exists) {
+            final userData = userSnapshot.data();
+            if (userData != null) {
+              reviewData['userName'] = userData['prenom'] ?? 'Anonymous';
+              reviewData['userInitial'] = (userData['prenom']?.isNotEmpty ?? false)
+                  ? userData['prenom'][0].toUpperCase()
+                  : '?';
+            }
+          } else {
+            reviewData['userName'] = 'Anonymous';
+            reviewData['userInitial'] = '?';
+          }
+        } else {
+          reviewData['userName'] = 'Anonymous';
+          reviewData['userInitial'] = '?';
+        }
+
+        loadedReviews.add(reviewData);
+      }
+
+      setState(() {
+        reviews = loadedReviews;
+      });
+    } catch (e) {
+      print('Error fetching reviews: $e');
+    }
   }
 
   Future<void> fetchGameDetails() async {
@@ -40,6 +116,7 @@ class _SingleGameState extends State<SingleGame> {
       });
     }
   }
+
 
   @override
   Widget build(BuildContext context) {
@@ -152,6 +229,7 @@ class _SingleGameState extends State<SingleGame> {
                 )
                     : const Text('No screenshots available.'),
                 const SizedBox(height: 16),
+                //Add review section by amine
                 TextField(
                   controller: _descriptionController,
                   decoration: InputDecoration(
@@ -186,6 +264,101 @@ class _SingleGameState extends State<SingleGame> {
                     child: const Text('Add Review', style: TextStyle(fontSize: 16, color: Colors.white)),
                   ),
                 ),
+                const SizedBox(height: 16),
+                // Display existing reviews
+                const Text(
+                  'Reviews:',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 8),
+                /*
+                ListView.builder(
+                  shrinkWrap: true,
+                  physics: NeverScrollableScrollPhysics(),
+                  itemCount: reviews.length,
+                  itemBuilder: (context, index) {
+                    final review = reviews[index];
+                    return Card(
+                      margin: const EdgeInsets.symmetric(vertical: 8),
+                      child: Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            //Text('User ID: ${review['userId']}'),
+                            //Text('Name: ${review['nom']}'),
+                            Text('Rating: ${review['rating']}'),
+                            Text('Review: ${review['description']}'),
+                            Text('Date: ${review['timestamp'].toDate()}'),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                )
+                */
+                ListView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: reviews.length,
+                  itemBuilder: (context, index) {
+                    final review = reviews[index];
+                    final userName = review['userName'] ?? 'Anonymous';
+                    final userInitial = review['userInitial'] ?? '?';
+
+                    // Generate random RGB colors for the border
+                    final random = Random();
+                    final borderColor = Color.fromARGB(
+                      255, // Alpha (opacity), fully opaque
+                      random.nextInt(256), // Red (0-255)
+                      random.nextInt(256), // Green (0-255)
+                      random.nextInt(256), // Blue (0-255)
+                    );
+
+                    return Card(
+                      margin: const EdgeInsets.symmetric(vertical: 8),
+                      child: Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: Row(
+                          children: [
+                            // Avatar with random border color
+                            Container(
+                              padding: const EdgeInsets.all(2), // Border width
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                border: Border.all(color: borderColor, width: 3), // Random border color
+                              ),
+                              child: CircleAvatar(
+                                backgroundColor: Colors.teal,
+                                child: Text(
+                                  userInitial,
+                                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    userName,
+                                    style: const TextStyle(fontWeight: FontWeight.bold),
+                                  ),
+                                  Text('Rating: ${review['rating']}'),
+                                  Text('Review: ${review['description']}'),
+                                  Text('Date: ${review['timestamp'].toDate()}'),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                )
+
+
               ],
             ),
           ),
@@ -194,6 +367,7 @@ class _SingleGameState extends State<SingleGame> {
     );
   }
 
+  /*
   void _submitReview() async {
     if (_descriptionController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please enter a description.')));
@@ -227,6 +401,46 @@ class _SingleGameState extends State<SingleGame> {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Review submitted successfully!')));
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Failed to submit review. Please try again.')));
+    }
+  }
+   */
+
+  void _submitReview() async {
+    if (_descriptionController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter a description.')),
+      );
+      return;
+    }
+
+    try {
+      final currentUser = FirebaseAuth.instance.currentUser;
+      final userId = currentUser?.uid;
+      final reviewsRef = FirebaseFirestore.instance.collection('reviews');
+      // Prepare the review data
+      final reviewData = {
+        'gameId': widget.gameId,
+        'userId': userId, // Add the user ID
+        //'userName': userName,
+        'description': _descriptionController.text.trim(),
+        'rating': _rating,
+        'timestamp': DateTime.now(),
+      };
+      // Add the review to Firestore
+      await reviewsRef.add(reviewData);
+      // Clear the form
+      _descriptionController.clear();
+      setState(() => _rating = 3.0);
+      // Fetch reviews again to update the list
+      fetchReviews();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Thank you for your feedback! Your review has been successfully added.')),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Failed to submit review. Please try again.')),
+      );
+      print('Error submitting review: $e');
     }
   }
 }
