@@ -19,6 +19,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _isLoading = false;
+  bool _obscurePassword = true;
 
   String? emailValidator(String? value) {
     if (value == null || value.isEmpty) {
@@ -128,7 +129,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
     }
   }
 
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -215,7 +215,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                 ),
                 SizedBox(height: 15),
 
-                // Password field
+                // Password field with show/hide functionality
                 TextFormField(
                   controller: _passwordController,
                   decoration: InputDecoration(
@@ -231,8 +231,26 @@ class _SignUpScreenState extends State<SignUpScreen> {
                       borderRadius: BorderRadius.circular(8),
                       borderSide: BorderSide(color: Colors.teal, width: 1),
                     ),
+                    suffixIcon: GestureDetector(
+                      onTapDown: (_) {
+                        setState(() {
+                          _obscurePassword = false; // Show password
+                        });
+                      },
+                      onTapUp: (_) {
+                        setState(() {
+                          _obscurePassword = true; // Hide password
+                        });
+                      },
+                      child: Icon(
+                        _obscurePassword
+                            ? Icons.visibility_off
+                            : Icons.visibility,
+                        color: Colors.grey,
+                      ),
+                    ),
                   ),
-                  obscureText: true,
+                  obscureText: _obscurePassword,
                   validator: passwordValidator,
                 ),
                 SizedBox(height: 15),
@@ -263,7 +281,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   child: Text(
                     'Déjà un compte ? Se connecter',
                     style: TextStyle(
-
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -275,6 +292,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
       ),
     );
   }
+
 
   @override
   void dispose() {
