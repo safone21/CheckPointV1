@@ -1,8 +1,10 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:games/Screens/HomePages/GamesListFetch.dart';
 
 
 import 'HomePages/UserProfilePage.dart';
+import 'LoginScreen.dart';
 
 
 class HomeScreen extends StatefulWidget {
@@ -27,10 +29,20 @@ class _HomeScreenState extends State<HomeScreen> {
         body: pages[pageIndex],
         bottomNavigationBar: BottomNavigationBar(
           currentIndex: pageIndex,
-          onTap: (int index) {
-            setState(() {
-              pageIndex = index;
-            });
+          onTap: (int index) async {
+            if (index == 2) {
+              // Handle sign out for the third tab
+              await FirebaseAuth.instance.signOut();
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(builder: (context) => LoginScreen()),
+              );
+            } else {
+              // Update the page index for navigation
+              setState(() {
+                pageIndex = index;
+              });
+            }
           },
           items: const [
             BottomNavigationBarItem(
@@ -40,6 +52,10 @@ class _HomeScreenState extends State<HomeScreen> {
             BottomNavigationBarItem(
               icon: Icon(Icons.person),
               label: 'Profile',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.logout),
+              label: 'Sign Out',
             ),
           ],
         ),
