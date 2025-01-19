@@ -54,43 +54,83 @@ class _SingleGameState extends State<SingleGame> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Image.network(gameData!['thumbnail'], fit: BoxFit.cover),
+                Image.network(gameData?['thumbnail'] ?? '', fit: BoxFit.cover, errorBuilder: (_, __, ___) => const Placeholder(fallbackHeight: 200)),
                 const SizedBox(height: 16),
-                Text(
-                  gameData!['title'],
-                  style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                Text(gameData?['title'] ?? 'Unknown Game', style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 8),
+                Text(gameData?['short_description'] ?? 'No description available', style: const TextStyle(fontSize: 16)),
+                const SizedBox(height: 16),
+                Card(
+                  margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 15), // Margin for consistent spacing
+                  elevation: 2,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Genre: ${gameData?['genre'] ?? 'N/A'}'),
+                        const SizedBox(height: 8),
+                        Text('Platform: ${gameData?['platform'] ?? 'N/A'}'),
+                        const SizedBox(height: 8),
+                        Text('Publisher: ${gameData?['publisher'] ?? 'N/A'}'),
+                        const SizedBox(height: 8),
+                        Text('Developer: ${gameData?['developer'] ?? 'N/A'}'),
+                        const SizedBox(height: 8),
+                        Text('Release Date: ${gameData?['release_date'] ?? 'N/A'}'),
+                      ],
+                    ),
+                  ),
                 ),
-                const SizedBox(height: 8),
-                Text(
-                  gameData!['short_description'],
-                  style: const TextStyle(fontSize: 16),
+                const SizedBox(height: 16),
+                Card(
+                  margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 15),
+                  elevation: 2,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(16.0),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Minimum System Requirements:',
+                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+                          ),
+                          const SizedBox(height: 8),
+                          if (gameData?['minimum_system_requirements'] != null)
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text('OS: ${gameData?['minimum_system_requirements']?['os'] ?? 'N/A'}'),
+                                const SizedBox(height: 4),
+                                Text('Processor: ${gameData?['minimum_system_requirements']?['processor'] ?? 'N/A'}'),
+                                const SizedBox(height: 4),
+                                Text('Memory: ${gameData?['minimum_system_requirements']?['memory'] ?? 'N/A'}'),
+                                const SizedBox(height: 4),
+                                Text('Graphics: ${gameData?['minimum_system_requirements']?['graphics'] ?? 'N/A'}'),
+                                const SizedBox(height: 4),
+                                Text('Storage: ${gameData?['minimum_system_requirements']?['storage'] ?? 'N/A'}'),
+                              ],
+                            )
+                          else
+                            const Text(
+                              'No minimum system requirements available.',
+                              style: TextStyle(fontSize: 16, fontStyle: FontStyle.italic),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ),
                 ),
+
                 const SizedBox(height: 16),
-                Text('Genre: ${gameData!['genre']}'),
+                Text('Screenshots:', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 8),
-                Text('Platform: ${gameData!['platform']}'),
-                const SizedBox(height: 8),
-                Text('Publisher: ${gameData!['publisher']}'),
-                const SizedBox(height: 8),
-                Text('Developer: ${gameData!['developer']}'),
-                const SizedBox(height: 8),
-                Text('Release Date: ${gameData!['release_date']}'),
-                const SizedBox(height: 16),
-                Text('Minimum System Requirements:'),
-                const SizedBox(height: 8),
-                Text('OS: ${gameData!['minimum_system_requirements']['os']}'),
-                const SizedBox(height: 4),
-                Text('Processor: ${gameData!['minimum_system_requirements']['processor']}'),
-                const SizedBox(height: 4),
-                Text('Memory: ${gameData!['minimum_system_requirements']['memory']}'),
-                const SizedBox(height: 4),
-                Text('Graphics: ${gameData!['minimum_system_requirements']['graphics']}'),
-                const SizedBox(height: 4),
-                Text('Storage: ${gameData!['minimum_system_requirements']['storage']}'),
-                const SizedBox(height: 16),
-                Text('Screenshots:', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                const SizedBox(height: 8),
-                gameData!['screenshots'] != null
+                gameData?['screenshots'] != null
                     ? SizedBox(
                   height: 200,
                   child: ListView.builder(
@@ -104,6 +144,7 @@ class _SingleGameState extends State<SingleGame> {
                           fit: BoxFit.cover,
                           height: 200,
                           width: 300,
+                          errorBuilder: (_, __, ___) => const Placeholder(fallbackHeight: 200, fallbackWidth: 300),
                         ),
                       );
                     },
@@ -115,9 +156,7 @@ class _SingleGameState extends State<SingleGame> {
                   controller: _descriptionController,
                   decoration: InputDecoration(
                     hintText: 'Enter your review ...',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                     filled: true,
                     contentPadding: const EdgeInsets.all(12),
                   ),
@@ -125,10 +164,7 @@ class _SingleGameState extends State<SingleGame> {
                   style: const TextStyle(fontSize: 16),
                 ),
                 const SizedBox(height: 8),
-                const Text(
-                  'Rate Your Experience !',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
-                ),
+                const Text('Rate Your Experience!', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
                 const SizedBox(height: 8),
                 RatingBar.builder(
                   initialRating: _rating,
@@ -144,15 +180,10 @@ class _SingleGameState extends State<SingleGame> {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.teal,
                       padding: const EdgeInsets.symmetric(horizontal: 50, vertical: 12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(30),
-                      ),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
                     ),
                     onPressed: _submitReview,
-                    child: const Text(
-                      'Add Review',
-                      style: TextStyle(fontSize: 16, color: Colors.white),
-                    ),
+                    child: const Text('Add Review', style: TextStyle(fontSize: 16, color: Colors.white)),
                   ),
                 ),
               ],
@@ -165,18 +196,14 @@ class _SingleGameState extends State<SingleGame> {
 
   void _submitReview() async {
     if (_descriptionController.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter a description.')),
-      );
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please enter a description.')));
       return;
     }
 
     try {
       final currentUser = FirebaseAuth.instance.currentUser;
       if (currentUser == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('You need to be logged in to add a review.')),
-        );
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('You need to be logged in to add a review.')));
         return;
       }
 
@@ -197,13 +224,9 @@ class _SingleGameState extends State<SingleGame> {
       _descriptionController.clear();
       setState(() => _rating = 3.0);
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Review submitted successfully!')),
-      );
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Review submitted successfully!')));
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Failed to submit review. Please try again.')),
-      );
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Failed to submit review. Please try again.')));
     }
   }
 }
