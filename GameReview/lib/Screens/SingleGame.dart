@@ -22,7 +22,6 @@ class _SingleGameState extends State<SingleGame> {
   double _rating = 3.0;
   List<Map<String, dynamic>> reviews = [];
 
-
   @override
   void initState() {
     super.initState();
@@ -30,30 +29,28 @@ class _SingleGameState extends State<SingleGame> {
     fetchReviews();
   }
 
-  /*
-  Future<void> fetchReviews() async {
-    try {
-      final reviewsSnapshot = await FirebaseFirestore.instance
-          .collection('reviews')
-          .where('gameId', isEqualTo: widget.gameId)
-          .get();
+  /// Fetch game details from the external API
+  Future<void> fetchGameDetails() async {
+    const String apiUrl =
+        "https://free-to-play-games-database.p.rapidapi.com/api/game";
+    const Map<String, String> headers = {
+      'x-rapidapi-host': 'free-to-play-games-database.p.rapidapi.com',
+      'x-rapidapi-key': '4fc32dc1f9mshee7fb920c383e24p13a8fbjsn170c8a964d5f',
+    };
 
-      final List<Map<String, dynamic>> loadedReviews = [];
-      for (var doc in reviewsSnapshot.docs) {
-        loadedReviews.add(doc.data());
-
-      }
-
+    final response = await http.get(
+      Uri.parse('$apiUrl?id=${widget.gameId}'),
+      headers: headers,
+    );
+    if (response.statusCode == 200) {
       setState(() {
-        reviews = loadedReviews;
+        gameData = json.decode(response.body);
+        isLoading = false;
       });
-    } catch (e) {
-      print('Error fetching reviews: $e');
     }
   }
 
-   */
-
+  /// Fetch all reviews for this `gameId`, including user info
   Future<void> fetchReviews() async {
     try {
       final reviewsSnapshot = await FirebaseFirestore.instance
@@ -64,6 +61,10 @@ class _SingleGameState extends State<SingleGame> {
       final List<Map<String, dynamic>> loadedReviews = [];
       for (var doc in reviewsSnapshot.docs) {
         final reviewData = doc.data();
+
+        // Add the docId so we can update/delete the specific document
+        reviewData['docId'] = doc.id;
+
         final userId = reviewData['userId'];
 
         // Fetch the user's details using the userId
@@ -77,7 +78,8 @@ class _SingleGameState extends State<SingleGame> {
             final userData = userSnapshot.data();
             if (userData != null) {
               reviewData['userName'] = userData['prenom'] ?? 'Anonymous';
-              reviewData['userInitial'] = (userData['prenom']?.isNotEmpty ?? false)
+              reviewData['userInitial'] =
+              (userData['prenom']?.isNotEmpty ?? false)
                   ? userData['prenom'][0].toUpperCase()
                   : '?';
             }
@@ -101,29 +103,173 @@ class _SingleGameState extends State<SingleGame> {
     }
   }
 
-  Future<void> fetchGameDetails() async {
-    const String apiUrl = "https://free-to-play-games-database.p.rapidapi.com/api/game";
-    const Map<String, String> headers = {
-      'x-rapidapi-host': 'free-to-play-games-database.p.rapidapi.com',
-      'x-rapidapi-key': '4fc32dc1f9mshee7fb920c383e24p13a8fbjsn170c8a964d5f',
-    };
+  /// Submit (Add) a new review
+  void _submitReview() async {
+    if (_descriptionController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter a description.')),
+      );
+      return;
+    }
 
-    final response = await http.get(Uri.parse('$apiUrl?id=${widget.gameId}'), headers: headers);
-    if (response.statusCode == 200) {
-      setState(() {
-        gameData = json.decode(response.body);
-        isLoading = false;
-      });
+    try {
+      final currentUser = FirebaseAuth.instance.currentUser;
+      if (currentUser == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+              content: Text('You must be logged in to submit a review.')),
+        );
+        return;
+      }
+
+      final userId = currentUser.uid;
+      final reviewsRef = FirebaseFirestore.instance.collection('reviews');
+
+      // Prepare the review data
+      final reviewData = {
+        'gameId': widget.gameId,
+        'userId': userId,
+        'description': _descriptionController.text.trim(),
+        'rating': _rating,
+        'timestamp': DateTime.now(),
+      };
+
+      // Add the review to Firestore
+      await reviewsRef.add(reviewData);
+
+      // Clear the form
+      _descriptionController.clear();
+      setState(() => _rating = 3.0);
+
+      // Fetch reviews again to update the list
+      fetchReviews();
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content: Text('Thank you for your feedback! Your review has been added.')),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Failed to submit review. Please try again.')),
+      );
+      print('Error submitting review: $e');
     }
   }
 
+  /// Delete a review from Firestore
+  Future<void> _deleteReview(String docId) async {
+    try {
+      await FirebaseFirestore.instance.collection('reviews').doc(docId).delete();
+      // Re-fetch to update the UI
+      fetchReviews();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Review deleted successfully.')),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Failed to delete review.')),
+      );
+      print('Error deleting review: $e');
+    }
+  }
+
+  /// Update a review in Firestore
+  Future<void> _updateReview(String docId, String newDesc, double newRating) async {
+    try {
+      await FirebaseFirestore.instance
+          .collection('reviews')
+          .doc(docId)
+          .update({
+        'description': newDesc,
+        'rating': newRating,
+      });
+      // Refresh
+      fetchReviews();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Review updated successfully.')),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Failed to update review.')),
+      );
+      print('Error updating review: $e');
+    }
+  }
+
+  /// Show a dialog (or bottomSheet) for updating the review
+  void _showUpdateDialog(Map<String, dynamic> review) {
+    // Pre-fill with the existing data
+    final TextEditingController descController =
+    TextEditingController(text: review['description'] ?? '');
+    double ratingValue = (review['rating'] is num) ? review['rating'] * 1.0 : 3.0;
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Update Review'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: descController,
+                  maxLines: 3,
+                  decoration: const InputDecoration(
+                    labelText: 'Review',
+                  ),
+                ),
+                const SizedBox(height: 16),
+                const Text('Update Your Rating:', style: TextStyle(fontWeight: FontWeight.bold)),
+                RatingBar.builder(
+                  initialRating: ratingValue,
+                  minRating: 1,
+                  allowHalfRating: true,
+                  itemCount: 5,
+                  itemBuilder: (_, __) => const Icon(Icons.star, color: Colors.amber),
+                  onRatingUpdate: (rating) => ratingValue = rating,
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: Navigator.of(context).pop,
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                final newDesc = descController.text.trim();
+                if (newDesc.isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Please enter a description.')),
+                  );
+                  return;
+                }
+                // Update in Firestore
+                await _updateReview(review['docId'], newDesc, ratingValue);
+                if (!mounted) return;
+                Navigator.of(context).pop(); // close dialog
+              },
+              child: const Text('Save'),
+            ),
+          ],
+        );
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
+    final currentUser = FirebaseAuth.instance.currentUser;
+    final currentUserId = currentUser?.uid; // null if not logged in
+
     return SafeArea(
       child: Scaffold(
-        appBar: AppBar(title: Text(gameData?['title'] ?? "Game Details"),
-        backgroundColor: Colors.teal[700],),
+        appBar: AppBar(
+          title: Text(gameData?['title'] ?? "Game Details"),
+          backgroundColor: Colors.teal[700],
+        ),
         body: isLoading
             ? const Center(child: CircularProgressIndicator())
             : SingleChildScrollView(
@@ -132,16 +278,35 @@ class _SingleGameState extends State<SingleGame> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Image.network(gameData?['thumbnail'] ?? '', fit: BoxFit.cover, errorBuilder: (_, __, ___) => const Placeholder(fallbackHeight: 200)),
+                // Main Image
+                Image.network(
+                  gameData?['thumbnail'] ?? '',
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => const Placeholder(fallbackHeight: 200),
+                ),
                 const SizedBox(height: 16),
-                Text(gameData?['title'] ?? 'Unknown Game', style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+                // Title
+                Text(
+                  gameData?['title'] ?? 'Unknown Game',
+                  style: const TextStyle(
+                      fontSize: 24, fontWeight: FontWeight.bold),
+                ),
                 const SizedBox(height: 8),
-                Text(gameData?['short_description'] ?? 'No description available', style: const TextStyle(fontSize: 16)),
+                // Short description
+                Text(
+                  gameData?['short_description'] ??
+                      'No description available',
+                  style: const TextStyle(fontSize: 16),
+                ),
                 const SizedBox(height: 16),
+
+                // Game info card
                 Card(
-                  margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 15), // Margin for consistent spacing
+                  margin: const EdgeInsets.symmetric(
+                      vertical: 8, horizontal: 15),
                   elevation: 2,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8)),
                   child: Container(
                     width: double.infinity,
                     padding: const EdgeInsets.all(16.0),
@@ -156,16 +321,21 @@ class _SingleGameState extends State<SingleGame> {
                         const SizedBox(height: 8),
                         Text('Developer: ${gameData?['developer'] ?? 'N/A'}'),
                         const SizedBox(height: 8),
-                        Text('Release Date: ${gameData?['release_date'] ?? 'N/A'}'),
+                        Text(
+                            'Release Date: ${gameData?['release_date'] ?? 'N/A'}'),
                       ],
                     ),
                   ),
                 ),
+
                 const SizedBox(height: 16),
+                // Minimum system requirements
                 Card(
-                  margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 15),
+                  margin: const EdgeInsets.symmetric(
+                      vertical: 8, horizontal: 15),
                   elevation: 2,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8)),
                   child: Container(
                     width: double.infinity,
                     padding: const EdgeInsets.all(16.0),
@@ -176,28 +346,39 @@ class _SingleGameState extends State<SingleGame> {
                         children: [
                           const Text(
                             'Minimum System Requirements:',
-                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+                            style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 18),
                           ),
                           const SizedBox(height: 8),
-                          if (gameData?['minimum_system_requirements'] != null)
+                          if (gameData?['minimum_system_requirements'] !=
+                              null)
                             Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
+                              crossAxisAlignment:
+                              CrossAxisAlignment.start,
                               children: [
-                                Text('OS: ${gameData?['minimum_system_requirements']?['os'] ?? 'N/A'}'),
+                                Text(
+                                    'OS: ${gameData?['minimum_system_requirements']?['os'] ?? 'N/A'}'),
                                 const SizedBox(height: 4),
-                                Text('Processor: ${gameData?['minimum_system_requirements']?['processor'] ?? 'N/A'}'),
+                                Text(
+                                    'Processor: ${gameData?['minimum_system_requirements']?['processor'] ?? 'N/A'}'),
                                 const SizedBox(height: 4),
-                                Text('Memory: ${gameData?['minimum_system_requirements']?['memory'] ?? 'N/A'}'),
+                                Text(
+                                    'Memory: ${gameData?['minimum_system_requirements']?['memory'] ?? 'N/A'}'),
                                 const SizedBox(height: 4),
-                                Text('Graphics: ${gameData?['minimum_system_requirements']?['graphics'] ?? 'N/A'}'),
+                                Text(
+                                    'Graphics: ${gameData?['minimum_system_requirements']?['graphics'] ?? 'N/A'}'),
                                 const SizedBox(height: 4),
-                                Text('Storage: ${gameData?['minimum_system_requirements']?['storage'] ?? 'N/A'}'),
+                                Text(
+                                    'Storage: ${gameData?['minimum_system_requirements']?['storage'] ?? 'N/A'}'),
                               ],
                             )
                           else
                             const Text(
                               'No minimum system requirements available.',
-                              style: TextStyle(fontSize: 16, fontStyle: FontStyle.italic),
+                              style: TextStyle(
+                                  fontSize: 16,
+                                  fontStyle: FontStyle.italic),
                             ),
                         ],
                       ),
@@ -206,7 +387,12 @@ class _SingleGameState extends State<SingleGame> {
                 ),
 
                 const SizedBox(height: 16),
-                Text('Screenshots:', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                // Screenshots
+                const Text(
+                  'Screenshots:',
+                  style: TextStyle(
+                      fontSize: 18, fontWeight: FontWeight.bold),
+                ),
                 const SizedBox(height: 8),
                 gameData?['screenshots'] != null
                     ? SizedBox(
@@ -216,26 +402,33 @@ class _SingleGameState extends State<SingleGame> {
                     itemCount: gameData!['screenshots'].length,
                     itemBuilder: (context, index) {
                       return Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                        padding:
+                        const EdgeInsets.symmetric(horizontal: 8.0),
                         child: Image.network(
                           gameData!['screenshots'][index]['image'],
                           fit: BoxFit.cover,
                           height: 200,
                           width: 300,
-                          errorBuilder: (_, __, ___) => const Placeholder(fallbackHeight: 200, fallbackWidth: 300),
+                          errorBuilder: (_, __, ___) =>
+                          const Placeholder(
+                              fallbackHeight: 200,
+                              fallbackWidth: 300),
                         ),
                       );
                     },
                   ),
                 )
                     : const Text('No screenshots available.'),
+
                 const SizedBox(height: 16),
-                //Add review section by amine
+
+                // ----------- ADD A NEW REVIEW -----------
                 TextField(
                   controller: _descriptionController,
                   decoration: InputDecoration(
                     hintText: 'Enter your review ...',
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12)),
                     filled: true,
                     contentPadding: const EdgeInsets.all(12),
                   ),
@@ -243,14 +436,19 @@ class _SingleGameState extends State<SingleGame> {
                   style: const TextStyle(fontSize: 16),
                 ),
                 const SizedBox(height: 8),
-                const Text('Rate Your Experience!', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+                const Text(
+                  'Rate Your Experience!',
+                  style: TextStyle(
+                      fontWeight: FontWeight.bold, fontSize: 18),
+                ),
                 const SizedBox(height: 8),
                 RatingBar.builder(
                   initialRating: _rating,
                   minRating: 1,
                   allowHalfRating: true,
                   itemCount: 5,
-                  itemBuilder: (_, __) => const Icon(Icons.star, color: Colors.amber),
+                  itemBuilder: (_, __) =>
+                  const Icon(Icons.star, color: Colors.amber),
                   onRatingUpdate: (rating) => setState(() => _rating = rating),
                 ),
                 const SizedBox(height: 16),
@@ -258,46 +456,28 @@ class _SingleGameState extends State<SingleGame> {
                   child: ElevatedButton(
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.teal,
-                      padding: const EdgeInsets.symmetric(horizontal: 50, vertical: 12),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 50, vertical: 12),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(30)),
                     ),
                     onPressed: _submitReview,
-                    child: const Text('Add Review', style: TextStyle(fontSize: 16, color: Colors.white)),
+                    child: const Text(
+                      'Add Review',
+                      style: TextStyle(fontSize: 16, color: Colors.white),
+                    ),
                   ),
                 ),
+
                 const SizedBox(height: 16),
-                // Display existing reviews
+                // ----------- EXISTING REVIEWS -----------
                 const Text(
                   'Reviews:',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                      fontSize: 18, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 8),
-                /*
-                ListView.builder(
-                  shrinkWrap: true,
-                  physics: NeverScrollableScrollPhysics(),
-                  itemCount: reviews.length,
-                  itemBuilder: (context, index) {
-                    final review = reviews[index];
-                    return Card(
-                      margin: const EdgeInsets.symmetric(vertical: 8),
-                      child: Padding(
-                        padding: const EdgeInsets.all(8.0),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            //Text('User ID: ${review['userId']}'),
-                            //Text('Name: ${review['nom']}'),
-                            Text('Rating: ${review['rating']}'),
-                            Text('Review: ${review['description']}'),
-                            Text('Date: ${review['timestamp'].toDate()}'),
-                          ],
-                        ),
-                      ),
-                    );
-                  },
-                )
-                */
+
                 ListView.builder(
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
@@ -306,21 +486,25 @@ class _SingleGameState extends State<SingleGame> {
                     final review = reviews[index];
                     final userName = review['userName'] ?? 'Anonymous';
                     final userInitial = review['userInitial'] ?? '?';
+                    final docId = review['docId'];
+                    final userId = review['userId'];
+                    final timestamp = review['timestamp'];
+                    final formattedDate = (timestamp != null)
+                        ? DateFormat('yyyy-MM-dd HH:mm')
+                        .format(timestamp.toDate())
+                        : 'Unknown Date';
 
+                    // Check if the current user is the owner of this review
+                    final isOwner = (currentUserId != null && userId == currentUserId);
 
-                    // Generate random RGB colors for the border
+                    // Generate random border color for the avatar
                     final random = Random();
                     final borderColor = Color.fromARGB(
-                      255, // Alpha (opacity), fully opaque
-                      random.nextInt(256), // Red (0-255)
-                      random.nextInt(256), // Green (0-255)
-                      random.nextInt(256), // Blue (0-255)
+                      255,
+                      random.nextInt(256),
+                      random.nextInt(256),
+                      random.nextInt(256),
                     );
-
-
-                    final formattedDate = review['timestamp'] != null
-                        ? DateFormat('yyyy-MM-dd HH:mm').format(review['timestamp'].toDate())
-                        : 'Unknown Date';
 
                     return Card(
                       margin: const EdgeInsets.symmetric(vertical: 8),
@@ -333,17 +517,21 @@ class _SingleGameState extends State<SingleGame> {
                               padding: const EdgeInsets.all(2), // Border width
                               decoration: BoxDecoration(
                                 shape: BoxShape.circle,
-                                border: Border.all(color: borderColor, width: 3), // Random border color
+                                border: Border.all(color: borderColor, width: 3),
                               ),
                               child: CircleAvatar(
                                 backgroundColor: Colors.teal,
                                 child: Text(
                                   userInitial,
-                                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                  ),
                                 ),
                               ),
                             ),
                             const SizedBox(width: 8),
+                            // Review info
                             Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -358,96 +546,28 @@ class _SingleGameState extends State<SingleGame> {
                                 ],
                               ),
                             ),
+                            // If user is the owner, show update/delete icons
+                            if (isOwner) ...[
+                              IconButton(
+                                icon: const Icon(Icons.edit, color: Colors.blueAccent),
+                                onPressed: () => _showUpdateDialog(review),
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.delete, color: Colors.red),
+                                onPressed: () => _deleteReview(docId),
+                              ),
+                            ],
                           ],
                         ),
                       ),
                     );
                   },
-                )
-
-
+                ),
               ],
             ),
           ),
         ),
       ),
     );
-  }
-
-  /*
-  void _submitReview() async {
-    if (_descriptionController.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please enter a description.')));
-      return;
-    }
-
-    try {
-      final currentUser = FirebaseAuth.instance.currentUser;
-      if (currentUser == null) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('You need to be logged in to add a review.')));
-        return;
-      }
-
-      final userId = currentUser.uid;
-
-      final reviewsRef = FirebaseFirestore.instance.collection('reviews');
-
-      final reviewData = {
-        'gameId': widget.gameId,
-        'userId': userId,
-        'description': _descriptionController.text.trim(),
-        'rating': _rating,
-        'timestamp': DateTime.now(),
-      };
-
-      await reviewsRef.add(reviewData);
-
-      _descriptionController.clear();
-      setState(() => _rating = 3.0);
-
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Review submitted successfully!')));
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Failed to submit review. Please try again.')));
-    }
-  }
-   */
-
-  void _submitReview() async {
-    if (_descriptionController.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter a description.')),
-      );
-      return;
-    }
-
-    try {
-      final currentUser = FirebaseAuth.instance.currentUser;
-      final userId = currentUser?.uid;
-      final reviewsRef = FirebaseFirestore.instance.collection('reviews');
-      // Prepare the review data
-      final reviewData = {
-        'gameId': widget.gameId,
-        'userId': userId, // Add the user ID
-        //'userName': userName,
-        'description': _descriptionController.text.trim(),
-        'rating': _rating,
-        'timestamp': DateTime.now(),
-      };
-      // Add the review to Firestore
-      await reviewsRef.add(reviewData);
-      // Clear the form
-      _descriptionController.clear();
-      setState(() => _rating = 3.0);
-      // Fetch reviews again to update the list
-      fetchReviews();
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Thank you for your feedback! Your review has been successfully added.')),
-      );
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Failed to submit review. Please try again.')),
-      );
-      print('Error submitting review: $e');
-    }
   }
 }

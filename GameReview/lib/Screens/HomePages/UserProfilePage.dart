@@ -19,62 +19,61 @@ class _UserProfileState extends State<UserProfile> {
   final double profileHeight = 144;
   final double coverHeight = 280;
 
-  // Stats (en dur, à adapter si vous voulez les récupérer depuis Firestore)
+  // Stats (hard-coded example)
   final int reviewCount = 25;
   final int followingCount = 30;
   final int likeCount = 50;
 
-  File? coverImage; // Image sélectionnée pour la cover
+  // Cover image
+  File? coverImage;
   final String defaultCoverImage = 'assets/default_cover_image.jpg';
 
-  // Champs récupérés depuis Firestore
-  String? _firstName;  // correspond à "nom" ou "firstname" selon la structure
-  String? _lastName;   // correspond à "prenom" ou "lastname"
+  // Profile image
+  File? profileImage; // <--- NEW: store the selected profile image
+
+  // User info from Firestore
+  String? _firstName;
+  String? _lastName;
   String? _email;
 
   @override
   void initState() {
     super.initState();
-    _getUserData(); // On va chercher les infos Firestore de l'utilisateur
+    _getUserData();
   }
 
-  /// Récupère les infos de l'utilisateur connecté : UID -> doc('users') -> champs
+  /// Retrieve the connected user’s data from Firestore (collection 'users').
   Future<void> _getUserData() async {
     try {
       final currentUser = FirebaseAuth.instance.currentUser;
       if (currentUser == null) {
-        // Personne n'est connecté
-        return;
+        return; // No one is signed in
       }
       final userId = currentUser.uid;
 
-      // Lecture du document Firestore (collection 'users', doc == UID)
+      // Read the Firestore document (collection 'users', doc == UID)
       final docSnap = await FirebaseFirestore.instance
           .collection('users')
           .doc(userId)
           .get();
 
-      if (!docSnap.exists) {
-        // Aucune donnée trouvée
-        return;
-      }
+      if (!docSnap.exists) return;
 
       final data = docSnap.data();
       if (data == null) return;
 
-      // Mettez ici les clés exactes que vous avez dans Firestore :
-      // Ex : "nom", "prenom", "email"
+      // Adjust keys based on your Firestore structure:
       setState(() {
         _firstName = data['nom'] ?? '';
-        _lastName  = data['prenom'] ?? '';
-        _email     = data['email'] ?? '';
+        _lastName = data['prenom'] ?? '';
+        _email = data['email'] ?? '';
       });
     } catch (e) {
-      print('Erreur lors de la récupération des données : $e');
+      print('Error retrieving user data: $e');
     }
   }
 
-  /// Sélectionne l'image de couverture (depuis caméra ou galerie)
+  /// Pick an image for the cover from camera or gallery
   Future<void> pickCoverImage(ImageSource source) async {
     try {
       final ImagePicker picker = ImagePicker();
@@ -86,12 +85,12 @@ class _UserProfileState extends State<UserProfile> {
         });
       }
     } catch (e) {
-      print('Error picking image: $e');
+      print('Error picking cover image: $e');
     }
   }
 
-  /// Montre un bottomSheet avec "Choisir depuis la galerie" ou "Prendre une photo"
-  void showImageSourceOptions() {
+  /// Show a bottom sheet to pick the cover image source
+  void showCoverImageSourceOptions() {
     showModalBottomSheet(
       context: context,
       builder: (BuildContext context) {
@@ -122,6 +121,55 @@ class _UserProfileState extends State<UserProfile> {
     );
   }
 
+  /// Pick an image for the profile from camera or gallery
+  Future<void> pickProfileImage(ImageSource source) async {
+    try {
+      final ImagePicker picker = ImagePicker();
+      final XFile? image = await picker.pickImage(source: source);
+
+      if (image != null) {
+        setState(() {
+          profileImage = File(image.path);
+        });
+      }
+    } catch (e) {
+      print('Error picking profile image: $e');
+    }
+  }
+
+  /// Show a bottom sheet to pick the profile image source
+  void showProfileImageSourceOptions() {
+    showModalBottomSheet(
+      context: context,
+      builder: (BuildContext context) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.photo_library),
+                title: const Text('Choose from Gallery'),
+                onTap: () {
+                  Navigator.pop(context);
+                  pickProfileImage(ImageSource.gallery);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.camera_alt),
+                title: const Text('Take a Photo'),
+                onTap: () {
+                  Navigator.pop(context);
+                  pickProfileImage(ImageSource.camera);
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  /// Build the UI
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -157,7 +205,7 @@ class _UserProfileState extends State<UserProfile> {
     );
   }
 
-  /// Construction de la partie haute (image de couverture + photo de profil)
+  /// Top section with cover + profile
   Widget buildTop() {
     final top = coverHeight - profileHeight / 2;
     final bottom = profileHeight / 2;
@@ -178,7 +226,7 @@ class _UserProfileState extends State<UserProfile> {
     );
   }
 
-  /// Image de couverture (avec le bouton d'édition)
+  /// Cover image area (with edit button)
   Widget buildCoverImage() {
     return Stack(
       children: [
@@ -202,7 +250,7 @@ class _UserProfileState extends State<UserProfile> {
             backgroundColor: Colors.white,
             child: IconButton(
               icon: Icon(Icons.edit, color: Colors.grey[800]),
-              onPressed: showImageSourceOptions,
+              onPressed: showCoverImageSourceOptions,
             ),
           ),
         ),
@@ -210,18 +258,51 @@ class _UserProfileState extends State<UserProfile> {
     );
   }
 
-  /// Photo de profil (par défaut un asset)
+  /// Profile image (with first letter if no image)
   Widget buildProfileImage() {
-    return CircleAvatar(
-      radius: profileHeight / 2,
-      backgroundColor: Colors.teal,
-      backgroundImage: const AssetImage("assets/user.jpeg"),
+    // Combine first & last name
+    final fullName = '${_firstName ?? ''} ${_lastName ?? ''}'.trim();
+    // Take the first letter if we have a name, otherwise "?"
+    final initialLetter =
+    fullName.isNotEmpty ? fullName[0].toUpperCase() : '?';
+
+    return Stack(
+      children: [
+        CircleAvatar(
+          radius: profileHeight / 2,
+          // If the user picked a profileImage, display it
+          backgroundImage:
+          profileImage != null ? FileImage(profileImage!) : null,
+          // If there's no profileImage, use a colored background + initial
+          backgroundColor: Colors.teal,
+          child: profileImage == null
+              ? Text(
+            initialLetter,
+            style: const TextStyle(
+              fontSize: 40,
+              color: Colors.white,
+            ),
+          )
+              : null,
+        ),
+        // Small edit button in the bottom-right corner of the avatar
+        Positioned(
+          bottom: 0,
+          right: 0,
+          child: InkWell(
+            onTap: showProfileImageSourceOptions,
+            child: CircleAvatar(
+              backgroundColor: Colors.white,
+              child: Icon(Icons.edit, color: Colors.grey[800]),
+            ),
+          ),
+        ),
+      ],
     );
   }
 
-  /// Contenu principal (nom, email, stats, etc.)
+  /// Main content: name, email, stats, social icons, etc.
   Widget buildContent() {
-    // Concatène firstName + lastName (ou affiche "..." si null)
     final fullName = '${_firstName ?? '...'} ${_lastName ?? ''}'.trim();
 
     return Container(
@@ -229,7 +310,7 @@ class _UserProfileState extends State<UserProfile> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Nom complet
+          // Name
           Center(
             child: Text(
               fullName.isEmpty ? 'Utilisateur' : fullName,
@@ -241,7 +322,7 @@ class _UserProfileState extends State<UserProfile> {
           ),
           const SizedBox(height: 16),
 
-          // Slogan / description courte
+          // Short desc
           Center(
             child: Text(
               'Gaming and Netflix',
@@ -267,7 +348,7 @@ class _UserProfileState extends State<UserProfile> {
           ),
           const SizedBox(height: 16),
 
-          // Icons sociaux
+          // Social icons
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
@@ -315,7 +396,7 @@ class _UserProfileState extends State<UserProfile> {
     );
   }
 
-  /// Icone ronde cliquable pour lancer une URL (par ex. réseaux sociaux)
+  /// Build a single social icon circle that launches a URL
   Widget buildSocialIcon(IconData icon, String url) {
     return InkWell(
       onTap: () => _launchURL(url),
@@ -331,7 +412,7 @@ class _UserProfileState extends State<UserProfile> {
     );
   }
 
-  /// Barre de stats (Reviews, Following, Likes)
+  /// Stats row (Reviews, Following, Likes)
   Widget buildStats() {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8),
@@ -348,7 +429,7 @@ class _UserProfileState extends State<UserProfile> {
     );
   }
 
-  /// Lance l'URL donnée (Facebook, Instagram, etc.)
+  /// Helper to launch an external URL
   Future<void> _launchURL(String url) async {
     if (await canLaunch(url)) {
       await launch(url);
@@ -357,7 +438,7 @@ class _UserProfileState extends State<UserProfile> {
     }
   }
 
-  /// Construit un "bloc" stat (nombre + libellé)
+  /// Builds a single stat block with count + label
   Widget buildStatItem(String label, int count) {
     return Expanded(
       child: Column(
@@ -383,7 +464,7 @@ class _UserProfileState extends State<UserProfile> {
     );
   }
 
-  /// Séparateur vertical entre les stats
+  /// Divider between stats
   Widget buildDivider() {
     return SizedBox(
       height: 24,
